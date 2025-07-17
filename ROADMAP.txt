@@ -1,0 +1,103 @@
+# Cardfolio 2.0 — Green‑Field Roadmap
+
+---
+
+## 0. Tech‑Stack (lean ➜ scalable)
+
+| Layer | Lean choice (free / cheap) | Why future‑proof | Scale‑up path |
+|-------|---------------------------|------------------|---------------|
+| **Frontend** | **Next.js 14** on **Vercel Hobby** | SSR, edge functions, huge ecosystem | Upgrade to Vercel Pro or self‑host on Fly.io |
+| **Auth + DB** | **Supabase Free** (Postgres + RLS + Storage) | Postgres forever; auth baked in | Dump to Neon / RDS; keep same SQL |
+| **API / BFF** | **FastAPI** (Pydantic) on **Fly.io nano** (~\$2) | Typed, OpenAPI; container‑ready | Add replicas or migrate to ECS / Cloud Run |
+| **Scrapers / ETL** | Python 3.12 Docker tasks ➜ **Railway** free runtime | 12 h free/month & Postgres add‑on | Move Prefect agents to Fargate Spot |
+| **Orchestration** | **Prefect 2 Cloud (free)** | Schedules + UI; agent runs anywhere | Self‑host Prefect Server or use Pro |
+| **Warehouse / OLAP** | Postgres schemas + **DuckDB** notebooks | \$0 infra | ClickHouse Cloud or MotherDuck |
+| **Object Storage** | Supabase Storage (S3‑compat) | 1 GB free, CDN built‑in | Cloudflare R2 (egress‑free) |
+| **Billing** | **Stripe** Checkout + Billing | Metered usage native | — |
+| **LLM** | **OpenAI API** (pay‑per‑use) | Usage‑based, zero idle cost | Route heavy jobs to Mistral / Replicate or self‑host ollama |
+
+> **First‑month burn:** ≈ **\$15**
+
+---
+
+## 1. Monorepo Skeleton
+
+```text
+cardfolio2/
+├── .github/             # CI workflows (ruff, mypy, pytest)
+├── .env.example
+├── docker-compose.yml   # local PG, pgAdmin, MinIO
+├── pyproject.toml       # black, ruff, pytest
+│
+├── infra/               # Terraform / Fly / Vercel configs
+│
+├── data-pipeline/
+│   ├── collectors/
+│   │   ├── ebay/{fetch,parse}.py
+│   │   └── pricecharting/
+│   ├── filters/
+│   ├── jobs/            # Prefect flows
+│   ├── models/          # Pydantic DTOs
+│   └── tests/
+│
+├── warehouse/           # Postgres DDL + dbt
+│   ├── ddl/
+│   ├── dbt/
+│   └── seeds/
+│
+├── analytics/           # notebooks, DuckDB, dashboards
+│
+├── api/                 # FastAPI
+│   ├── app/{main.py,routers/,schemas/}
+│   ├── alembic/
+│   └── tests/
+│
+├── web/                 # Next.js 14 (RSC)
+│   ├── app/
+│   ├── components/
+│   ├── lib/
+│   └── __tests__/
+│
+└── scripts/             # one‑off helpers
+
+
+## Stage Roadmap
+
+| Stage | Deliverables | “Done” means |
+|-------|--------------|--------------|
+| 0 Bootstrap | Repo, Docker compose, CI, /health route | `docker compose up` passes CI & opens API + web |
+| 1 Master Catalog | products, product_aliases, image bucket | Alias search < 10 ms |
+| 2 Historical Backfill | Prefect flow → prices_raw | 90% cards ≥ 50 datapoints |
+| 3 Filter Pipeline v1 | Keyword, image, price filters | < 2% false positive (QA) |
+| 4 Warehouse Normalize | dbt prices_clean, dashboard | ETL < 30 min lag |
+| 5 Live Ingestion | 15 min scheduled scraper + alerts | < 10 min sale ➜ DB |
+| 6 Quant Validation | Notebooks: returns, volatility | Plots show sane data |
+| 7 Cardfolio MVP | Next.js dashboard, Supabase auth, FastAPI endpoints | Internal users manage collection |
+| 8 Pro Features | LLM “Price Insight”, Stripe metered billing | Paid plan live |
+| 9 Growth | Marketing site, Collectr CSV import | First paying users |
+
+---
+
+## Day‑1 Task Checklist
+
+- [ ] `git init && gh repo create cardfolio2`
+- [ ] Add `.github/workflows/ci.yml` (ruff + mypy + pytest)
+- [ ] Scaffold `docker-compose.yml` with Postgres 16, pgAdmin, MinIO
+- [ ] `fastapi start-project api`; add `/health` route
+- [ ] `npx create-next-app@latest web`; default page “coming soon”
+- [ ] Create `warehouse/ddl/00_catalog.sql` (products, product_aliases)
+- [ ] Write `data-pipeline/collectors/pricecharting/load_catalog.py` reading seed CSV
+- [ ] Push → CI green → `docker compose up` shows API + web locally ✔️
+
+---
+
+## LLM Cost Gate (later)
+
+```python
+# api/app/deps.py
+def enforce_token_quota(user: User, tokens_req: int):
+    quota = user.plan.token_quota
+    used  = redis.get(f"tok:{user.id}") or 0
+    if used + tokens_req > quota:
+        raise HTTPException(402, "Quota exceeded")
+    redis.incrby(f"tok:{user.id}", tokens_req)

@@ -1,0 +1,72 @@
+[tool.poetry]
+name = "cardfolio2"
+version = "0.1.0"
+description = "Card collecting platform with price tracking and portfolio management"
+authors = ["cardfolio <team@cardfolio.com>"]
+packages = [{include = "api"}, {include = "data_pipeline", from = "data-pipeline"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.116.1"
+uvicorn = "^0.35.0"
+pydantic = "^2.11.7"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.8.0"
+black = "^24.0.0"
+pytest = "^8.0.0"
+mypy = "^1.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = ["migrations", "venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "COM", "C4", "DTZ", "T10", "ISC", "ICN", "G", "PIE", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "TCH", "ARG", "PTH", "ERA", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
+ignore = ["E501", "S101", "PLR0913", "PLR0915"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["api/tests", "data-pipeline/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short" 

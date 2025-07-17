@@ -1,0 +1,65 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          
+      - name: Install dependencies
+        run: poetry install
+        
+      - name: Run ruff (linter)
+        run: poetry run ruff check .
+        
+      - name: Run black (formatter check)
+        run: poetry run black --check .
+        
+      - name: Run mypy (type checker)
+        run: poetry run mypy api/
+        
+      - name: Run pytest (tests)
+        run: poetry run pytest
+        
+  frontend-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+          
+      - name: Install frontend dependencies
+        run: cd web && npm ci
+        
+      - name: Run frontend build
+        run: cd web && npm run build
+        
+      - name: Run frontend tests
+        run: cd web && npm test -- --watchAll=false 

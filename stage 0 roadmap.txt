@@ -1,0 +1,131 @@
+# Stage 0 – Bootstrap
+
+Goal: Set up the base project structure, local dev environment, and CI pipeline.
+
+---
+
+## 1. Initialize the Repository
+
+```bash
+mkdir cardfolio2 && cd cardfolio2
+git init
+gh repo create cardfolio2 --public --source=. --remote=origin
+
+2. Set Up Python Project Environment
+
+Using Poetry:
+
+poetry init --name cardfolio2 --dependency fastapi --dependency uvicorn --dependency pydantic
+poetry add ruff black pytest mypy
+poetry export -f requirements.txt --output requirements.txt
+
+3. Set Up FastAPI App
+
+mkdir -p api/app/routers
+touch api/app/main.py
+
+Add the following to api/app/main.py:
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+4. Set Up Next.js Frontend
+
+npx create-next-app@latest web --typescript --app --import-alias "@/*"
+
+Replace contents of web/app/page.tsx:
+
+export default function HomePage() {
+  return <main className="text-white bg-black h-screen grid place-content-center">Coming Soon</main>;
+}
+
+5. Set Up Docker Compose
+
+Create docker-compose.yml in root:
+
+version: '3.8'
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: cardfolio
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: cardfolio
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio-data:/data
+
+6. Set Up Linting and CI
+
+Create .github/workflows/ci.yml:
+
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install ruff black mypy pytest
+      - name: Run linters
+        run: |
+          ruff .
+          black --check .
+          mypy api/
+      - name: Run tests
+        run: |
+          pytest
+
+7. Run Everything Locally
+
+docker compose up -d
+uvicorn api.app.main:app --reload --port 8000
+cd web
+npm run dev
+
+8. Verify
+
+    Open http://localhost:8000/health → FastAPI health check
+
+    Open http://localhost:3000 → Next.js frontend
+
+    Open http://localhost:5050 → pgAdmin login
+
+    Open http://localhost:9001 → MinIO dashboard
+
+9. Commit Code
+
+git add .
+git commit -m "stage 0 bootstrap complete"
+git push origin main

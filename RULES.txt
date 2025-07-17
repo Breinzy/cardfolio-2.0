@@ -1,0 +1,35 @@
+# Cursor Rules of Engagement
+
+1. **Follow the Roadmap Order**  
+   – Complete Stage 0 tasks before touching Stage 1, and so on.
+
+2. **One Task ≙ One Commit**  
+   – Finish a single atomic change, run checks, then `git commit -m "<stage>: <task>"`.
+
+3. **Write Tests for Every New Module**  
+   – Add/extend `tests/…` with Pytest for each feature or bug‑fix.
+
+4. **Run CI Locally Before Push**  
+   ```bash
+   ruff .
+   black --check .
+   mypy .
+   pytest
+
+    Keep Functions Small & Typed
+    – ≤ 30 LOC per function, with Pydantic models where relevant.
+
+    Never Skip Lint or Type Errors
+    – Code must be green on ruff, black, mypy, and pytest.
+
+    Touch Only One Layer at a Time
+    – Avoid frontend + backend + DB changes in the same PR.
+
+    Document Every Public Function
+    – Include a short docstring explaining purpose and I/O.
+
+    Ask for Clarification When Ambiguous
+    – If a requirement isn’t clear, pause and get confirmation.
+
+    No Untracked Files
+    – Commit or ignore; working tree should stay clean.

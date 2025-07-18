@@ -3,7 +3,6 @@ name = "cardfolio2"
 version = "0.1.0"
 description = "Card collecting platform with price tracking and portfolio management"
 authors = ["cardfolio <team@cardfolio.com>"]
-packages = [{include = "api"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
